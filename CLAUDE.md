@@ -57,8 +57,9 @@ manual smoke test of the affected flow.
 
 ## Environment
 
-Copy `.env.example` → `.env.local`. Required: `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`. Optional: model tuning vars + `WAKATIME_API_KEY` (for the analysis script).
+Copy `.env.example` → `.env.local`. Required by the app: `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`. `npm run analyze` additionally **requires** `WAKATIME_API_KEY` (and
+`OPENAI_API_KEY`) and exits early if either is missing. Optional: model tuning vars + `ANALYZE_*`.
 Never commit `.env.local`; never expose the service-role key to client code.
 
 ## Database

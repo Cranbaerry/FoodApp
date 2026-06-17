@@ -237,6 +237,13 @@ async function main() {
     console.error("✖ OPENAI_API_KEY is not set (add it to .env.local).");
     process.exit(1);
   }
+  if (!process.env.WAKATIME_API_KEY) {
+    console.error(
+      "✖ WAKATIME_API_KEY is not set. Add it to .env.local for measured hours " +
+        "(get it from https://wakatime.com/settings/api-key).",
+    );
+    process.exit(1);
+  }
 
   const days = Number.parseInt(process.env.ANALYZE_DAYS ?? "7", 10);
   const model = process.env.CHAT_MODEL || "gpt-4o";
@@ -375,7 +382,7 @@ async function main() {
   md.push("");
   md.push(
     hoursSource.startsWith("git")
-      ? "_Hours are estimated by grouping commits into sessions (≤120 min gaps) plus 30 min of pre-commit work per session. Set `WAKATIME_API_KEY` for measured time._"
+      ? "_The WakaTime API call failed, so hours are estimated by grouping commits into sessions (≤120 min gaps) plus 30 min of pre-commit work per session._"
       : `_Hours measured via the WakaTime API, scoped to project \`${project}\`. Override with ANALYZE_PROJECT, or set it empty to count all projects._`,
   );
 

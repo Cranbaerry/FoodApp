@@ -107,7 +107,7 @@ cp .env.example .env.local
 | `CHAT_TEMPERATURE` | — | Sampling temperature. Default `0.7`. |
 | `CHAT_MAX_TOKENS` | — | Max reply tokens. Default `1024`. |
 | `SYSTEM_PROMPT` | — | Override the assistant persona entirely. |
-| `WAKATIME_API_KEY` | — | Enables measured hours in the analysis script. |
+| `WAKATIME_API_KEY` | for `analyze` | Required to run `npm run analyze` (measured hours). [Get it here](https://wakatime.com/settings/api-key). |
 | `ANALYZE_DAYS` / `ANALYZE_AUTHOR` | — | Override the analysis window / author. |
 
 ### 3. Database
@@ -133,6 +133,26 @@ npm run start    # serve the production build
 npm run lint     # next lint
 npm run analyze  # weekly commit analysis (see below)
 ```
+
+---
+
+## Using NomNom
+
+1. **Open the app** at [http://localhost:3000](http://localhost:3000).
+2. **Add a food photo** on the upload screen — any of:
+   - **drag & drop** an image onto the drop zone,
+   - **click** the drop zone to choose a file or take a photo (on mobile),
+   - **paste** an image from your clipboard with **Ctrl/⌘ + V** (e.g. a screenshot).
+3. **Wait a moment** while NomNom uploads the photo and reads it — you'll see "Uploading…" then "Reading the nutrition facts…".
+4. **Review the Nutrition Facts label** that appears on the left, with the dish name, a short description, and a full FDA-style label (% Daily Values are computed from FDA reference values).
+5. **Chat about your meal** on the right:
+   - tap a **suggested question** chip (e.g. *"Is this a healthy choice?"*) to start, or
+   - type your own question and hit **Send**. Replies stream in live.
+   - The chat panel scrolls on its own; a **↓ Latest** button appears if you scroll up.
+6. **Come back later** — your session is saved, so refreshing the page restores the photo, label, and full conversation.
+7. **Analyze another meal** with the button under the label to start fresh.
+
+> Tip: the assistant's persona and the model can be changed any time via `SYSTEM_PROMPT` / `CHAT_MODEL` (see [Configuration](#configuration)) — no code changes needed.
 
 ---
 
@@ -218,16 +238,21 @@ RLS is enabled on both tables with **no public policies** — only the service-r
 
 A standalone script ([`scripts/analyze-commits.ts`](scripts/analyze-commits.ts)) that **pulls the repo** and analyses **your commits over the past 7 days**.
 
-```bash
-npm run analyze
-# or
-npx tsx scripts/analyze-commits.ts
-```
+**How to run it**
+
+1. Make sure `.env.local` has both **`OPENAI_API_KEY`** (powers the review) and **`WAKATIME_API_KEY`** (required — measures hours). Get the WakaTime key from [wakatime.com/settings/api-key](https://wakatime.com/settings/api-key).
+2. Run it from the repo root:
+   ```bash
+   npm run analyze
+   # or
+   npx tsx scripts/analyze-commits.ts
+   ```
+3. Read the summary printed in your terminal, and open the generated **`commit-analysis.md`** for the per-commit breakdown.
 
 **What it measures**
 
 - **Code quality** — GPT-4o reviews each commit's diff against a calibrated rubric (readability, structure, error handling, testing, commit message), producing per-commit scores and a **lines-weighted overall** score so large commits count proportionally.
-- **Hours spent** — uses the **WakaTime API** (`WAKATIME_API_KEY`) for *measured* coding time, **scoped to this project** (by repo/folder name) so it reflects time on *this* repo, not all your coding. Without a key it **estimates** from git timestamps by grouping commits into sessions (≤120 min gaps) and adding 30 min of pre-commit work per session. The report always states which source and project scope were used.
+- **Hours spent** — uses the **WakaTime API** for *measured* coding time, **scoped to this project** (by repo/folder name) so it reflects time on *this* repo, not all your coding. If the API call fails it falls back to estimating from git timestamps (grouping commits into sessions with ≤120 min gaps, plus 30 min of pre-commit work per session). The report always states the source and project scope.
 
 **Output** — a console summary plus a `commit-analysis.md` file with per-commit breakdowns. Example:
 
@@ -235,19 +260,19 @@ npx tsx scripts/analyze-commits.ts
 ════════════════════════════════════════════════════════════
   COMMIT ANALYSIS — past 7 days
 ════════════════════════════════════════════════════════════
-  Commits:        1
-  Lines:          +4460 / -0
-  Hours:          8.1h  (WakaTime (measured))
-  Lines/hour:     554
+  Commits:        4
+  Lines:          +4885 / -75
+  Hours:          0.9h  (WakaTime (measured, project: FoodApp))
+  Lines/hour:     597
 ────────────────────────────────────────────────────────────
-  Overall quality: 8.4/10  ████████░░
-   readability    8.0  ████████░░
-   structure      9.0  █████████░
+  Overall quality: 7.2/10  ███████░░░
+   readability    8.3  ████████░░
+   structure      8.3  ████████░░
    ...
 ════════════════════════════════════════════════════════════
 ```
 
-**Tuning** — `ANALYZE_DAYS` (window), `ANALYZE_AUTHOR` (which author's commits), `ANALYZE_PROJECT` (WakaTime project name; empty = all projects), `CHAT_MODEL` (review model).
+**Tuning** (all optional) — `ANALYZE_DAYS` (lookback window), `ANALYZE_AUTHOR` (which author's commits), `ANALYZE_PROJECT` (WakaTime project name; empty = all projects), `CHAT_MODEL` (review model).
 
 > If quality shows `n/a`, the OpenAI review calls failed — most often an exhausted `OPENAI_API_KEY` quota. Hours still report independently.
 
