@@ -63,9 +63,14 @@ Never commit `.env.local`; never expose the service-role key to client code.
 
 ## Database
 
-Schema lives in `supabase/migrations/0001_init.sql` (tables `chats`, `messages`; public
-`food-images` bucket). Apply changes via new migration files / the Supabase SQL editor — don't edit
-`0001_init.sql` after it's applied.
+Schema lives in `supabase/migrations/` (`0001_init.sql`: tables `chats`, `messages` + public
+`food-images` bucket; `0002_grants.sql`: role grants + default privileges). Apply changes via **new**
+migration files / the Supabase SQL editor — don't edit migrations after they're applied.
+
+**Grants gotcha:** hand-written tables in `public` do NOT auto-get Supabase role grants, so
+`service_role` (bypasses RLS but still needs table GRANTs) gets `permission denied for table`.
+`0002_grants.sql` sets `ALTER DEFAULT PRIVILEGES ... FOR ROLE postgres` so future tables are granted
+automatically — but if you create tables through some other path, re-check grants.
 
 ## Gotchas
 

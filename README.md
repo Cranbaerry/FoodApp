@@ -112,10 +112,10 @@ cp .env.example .env.local
 
 ### 3. Database
 
-The schema is already applied to the connected Supabase project. For a fresh project, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) in the Supabase **SQL Editor**. It creates:
+The schema is already applied to the connected Supabase project. For a fresh project, run the migrations in [`supabase/migrations/`](supabase/migrations/) **in order** in the Supabase **SQL Editor**:
 
-- `chats` and `messages` tables (RLS enabled, no public policies)
-- a public `food-images` storage bucket
+- `0001_init.sql` — `chats` and `messages` tables (RLS enabled, no public policies) + public `food-images` storage bucket
+- `0002_grants.sql` — grants the Supabase role privileges and sets default privileges so future tables get them automatically (without this, `service_role` hits `permission denied for table`)
 
 ### 4. Run
 
