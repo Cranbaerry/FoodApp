@@ -17,7 +17,7 @@
 
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, basename } from "node:path";
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { z } from "zod";
@@ -164,16 +164,18 @@ async function reviewCommit(model: string, c: Commit): Promise<Quality | null> {
 // ---------------------------------------------------------------------------
 // Hours: WakaTime (accurate) or git-timestamp sessionization (estimate)
 // ---------------------------------------------------------------------------
-async function wakatimeHours(days: number): Promise<number | null> {
+async function wakatimeHours(days: number, project: string | null): Promise<number | null> {
   const key = process.env.WAKATIME_API_KEY;
   if (!key) return null;
   const end = new Date();
   const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   const auth = Buffer.from(key).toString("base64");
+  // Scope to a single project so the hours reflect THIS repo, not all coding.
+  const projectParam = project ? `&project=${encodeURIComponent(project)}` : "";
   try {
     const res = await fetch(
-      `https://wakatime.com/api/v1/users/current/summaries?start=${fmt(start)}&end=${fmt(end)}`,
+      `https://wakatime.com/api/v1/users/current/summaries?start=${fmt(start)}&end=${fmt(end)}${projectParam}`,
       { headers: { Authorization: `Basic ${auth}` } },
     );
     if (!res.ok) {
@@ -241,6 +243,18 @@ async function main() {
 
   ensureRepo();
   const author = process.env.ANALYZE_AUTHOR || git("config user.email");
+  // WakaTime tracks time per project (by repo/folder name). Scope to this one.
+  // ANALYZE_PROJECT overrides the name; set it empty to count ALL projects.
+  let project: string | null;
+  if (process.env.ANALYZE_PROJECT !== undefined) {
+    project = process.env.ANALYZE_PROJECT || null;
+  } else {
+    try {
+      project = basename(git("rev-parse --show-toplevel"));
+    } catch {
+      project = basename(process.cwd());
+    }
+  }
   console.log(`\n🔎 Analyzing commits by ${author} over the last ${days} days\n`);
 
   pull();
@@ -282,10 +296,13 @@ async function main() {
   };
 
   // Hours
-  const wakaHours = await wakatimeHours(days);
+  const wakaHours = await wakatimeHours(days, project);
   const estHours = estimateHoursFromCommits(commits);
   const hours = wakaHours ?? estHours;
-  const hoursSource = wakaHours != null ? "WakaTime (measured)" : "git timestamps (estimated)";
+  const hoursSource =
+    wakaHours != null
+      ? `WakaTime (measured, ${project ? `project: ${project}` : "all projects"})`
+      : "git timestamps (estimated)";
 
   const totalAdded = commits.reduce((s, c) => s + c.added, 0);
   const totalDeleted = commits.reduce((s, c) => s + c.deleted, 0);
@@ -359,7 +376,7 @@ async function main() {
   md.push(
     hoursSource.startsWith("git")
       ? "_Hours are estimated by grouping commits into sessions (≤120 min gaps) plus 30 min of pre-commit work per session. Set `WAKATIME_API_KEY` for measured time._"
-      : "_Hours measured via the WakaTime API for the period._",
+      : `_Hours measured via the WakaTime API, scoped to project \`${project}\`. Override with ANALYZE_PROJECT, or set it empty to count all projects._`,
   );
 
   writeFileSync("commit-analysis.md", md.join("\n"), "utf8");

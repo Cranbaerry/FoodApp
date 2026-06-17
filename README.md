@@ -227,7 +227,7 @@ npx tsx scripts/analyze-commits.ts
 **What it measures**
 
 - **Code quality** — GPT-4o reviews each commit's diff against a calibrated rubric (readability, structure, error handling, testing, commit message), producing per-commit scores and a **lines-weighted overall** score so large commits count proportionally.
-- **Hours spent** — uses the **WakaTime API** (`WAKATIME_API_KEY`) for *measured* coding time. Without a key it **estimates** from git timestamps by grouping commits into sessions (≤120 min gaps) and adding 30 min of pre-commit work per session. The report always states which source was used.
+- **Hours spent** — uses the **WakaTime API** (`WAKATIME_API_KEY`) for *measured* coding time, **scoped to this project** (by repo/folder name) so it reflects time on *this* repo, not all your coding. Without a key it **estimates** from git timestamps by grouping commits into sessions (≤120 min gaps) and adding 30 min of pre-commit work per session. The report always states which source and project scope were used.
 
 **Output** — a console summary plus a `commit-analysis.md` file with per-commit breakdowns. Example:
 
@@ -247,7 +247,7 @@ npx tsx scripts/analyze-commits.ts
 ════════════════════════════════════════════════════════════
 ```
 
-**Tuning** — `ANALYZE_DAYS` (window), `ANALYZE_AUTHOR` (which author's commits), `CHAT_MODEL` (review model).
+**Tuning** — `ANALYZE_DAYS` (window), `ANALYZE_AUTHOR` (which author's commits), `ANALYZE_PROJECT` (WakaTime project name; empty = all projects), `CHAT_MODEL` (review model).
 
 > If quality shows `n/a`, the OpenAI review calls failed — most often an exhausted `OPENAI_API_KEY` quota. Hours still report independently.
 
