@@ -91,13 +91,24 @@ export default function Home() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <header className="mb-8 text-center">
+      <header className="relative mb-8 text-center">
         <h1 className="text-3xl font-extrabold tracking-tight text-brand-700">
           🍴 NomNom
         </h1>
         <p className="mt-1 text-gray-500">
           Snap your meal, get a nutrition label, and chat about it.
         </p>
+        <button
+          type="button"
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/";
+          }}
+          className="absolute right-0 top-0 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50"
+          title="Lock the app"
+        >
+          🔒 Lock
+        </button>
       </header>
 
       {error && (

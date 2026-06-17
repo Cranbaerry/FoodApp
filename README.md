@@ -100,6 +100,7 @@ cp .env.example .env.local
 
 | Variable | Required | Description |
 | --- | --- | --- |
+| `APP_PASSWORD` | — | If set, locks the whole app + API behind a single password (see [Password gate](#password-gate)). Leave empty to keep it open. |
 | `OPENAI_API_KEY` | ✅ | OpenAI key with available quota (vision + chat). |
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL (pre-filled for the FoodApp project). |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Supabase **service_role** key — Dashboard → Project Settings → API. Server-only; never exposed to the browser. |
@@ -168,6 +169,19 @@ SYSTEM_PROMPT="You are a warm, knowledgeable food companion..."
 ```
 
 `SYSTEM_PROMPT` only sets the **base persona** — at request time the server appends the dish name and nutrition JSON so answers stay grounded.
+
+### Password gate
+
+Set `APP_PASSWORD` in `.env.local` (or `.env`) to require a single shared password before **anything** is accessible — both the pages and every API route:
+
+```bash
+APP_PASSWORD=your-secret-here
+```
+
+- Unauthenticated page loads redirect to **`/login`**; unauthenticated API calls return **401**.
+- On the correct password, an httpOnly cookie holding a **SHA-256 of the password** (never the plaintext) is set for 30 days. Rotating `APP_PASSWORD` invalidates existing sessions.
+- A **🔒 Lock** button in the header logs out.
+- Leave `APP_PASSWORD` empty to disable the gate. Enforced in [`middleware.ts`](middleware.ts); never commit your real password (`.env` / `.env.local` are gitignored — `.env.example` is not).
 
 ---
 
