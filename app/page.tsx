@@ -155,7 +155,7 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="h-[70vh] md:h-auto">
+          <div className="h-[70vh] md:sticky md:top-4 md:h-[calc(100vh-2rem)]">
             <FoodChat chatId={chatId} initialMessages={initialMessages} />
           </div>
         </div>

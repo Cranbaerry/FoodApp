@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useChat, type Message } from "@ai-sdk/react";
 
 const QUICK_REPLIES = [
@@ -13,6 +13,10 @@ const QUICK_REPLIES = [
 /**
  * Streaming chat about the analysed food. Uses the Vercel AI SDK `useChat`
  * hook against /api/chat; the server injects the food + nutrition context.
+ *
+ * The message list scrolls *within itself* (never the page), auto-sticks to
+ * the bottom while you're already there, and shows a "jump to latest" button
+ * when you've scrolled up.
  */
 export function FoodChat({
   chatId,
@@ -28,16 +32,36 @@ export function FoodChat({
     body: { chatId },
   });
 
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [atBottom, setAtBottom] = useState(true);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
+
+  // Track whether the user is near the bottom of the message list.
+  const onScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setAtBottom(distance < 80);
+  }, []);
+
+  // Auto-stick to the bottom only when the user is already there.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (atBottom) scrollToBottom(messages.length <= 1 ? "auto" : "smooth");
+  }, [messages, atBottom, scrollToBottom]);
 
   const showQuickReplies = !isLoading && messages.length <= 1;
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+    <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div
+        ref={scrollRef}
+        onScroll={onScroll}
+        className="flex-1 space-y-3 overflow-y-auto p-4"
+      >
         {messages.length === 0 && (
           <p className="mt-6 text-center text-sm text-gray-400">
             Ask me anything about your meal — ingredients, swaps, how it fits your day…
@@ -45,15 +69,10 @@ export function FoodChat({
         )}
 
         {messages.map((m) => (
-          <div
-            key={m.id}
-            className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+          <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
               className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm ${
-                m.role === "user"
-                  ? "bg-brand-500 text-white"
-                  : "bg-gray-100 text-gray-800"
+                m.role === "user" ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-800"
               }`}
             >
               {m.content}
@@ -70,8 +89,22 @@ export function FoodChat({
         {error && (
           <p className="text-center text-sm text-red-500">Something went wrong. Try again.</p>
         )}
-        <div ref={bottomRef} />
       </div>
+
+      {/* Jump-to-latest appears only when scrolled up. */}
+      {!atBottom && (
+        <button
+          type="button"
+          onClick={() => {
+            setAtBottom(true);
+            scrollToBottom();
+          }}
+          aria-label="Scroll to latest message"
+          className="absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-brand-600 px-3 py-1.5 text-xs font-medium text-white shadow-lg hover:bg-brand-700"
+        >
+          ↓ Latest
+        </button>
+      )}
 
       {showQuickReplies && (
         <div className="flex flex-wrap gap-2 px-4 pb-2">

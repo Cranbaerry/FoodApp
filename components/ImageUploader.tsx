@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Drag-and-drop / click-to-pick uploader for a single food photo.
+ * Drag-and-drop / click-to-pick / paste uploader for a single food photo.
  * Shows a local preview immediately, then hands the file to the parent.
  */
 export function ImageUploader({
@@ -23,6 +23,23 @@ export function ImageUploader({
     },
     [onFile],
   );
+
+  // Paste an image from the clipboard (e.g. a screenshot or copied photo).
+  useEffect(() => {
+    if (disabled) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const item = Array.from(e.clipboardData?.items ?? []).find((i) =>
+        i.type.startsWith("image/"),
+      );
+      const file = item?.getAsFile();
+      if (file) {
+        e.preventDefault();
+        onFile(file);
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [disabled, onFile]);
 
   return (
     <div
@@ -51,7 +68,7 @@ export function ImageUploader({
       />
       <div className="mb-3 text-5xl">🍽️</div>
       <p className="text-lg font-semibold text-gray-800">Drop a photo of your food</p>
-      <p className="mt-1 text-sm text-gray-500">or click to take / choose a picture</p>
+      <p className="mt-1 text-sm text-gray-500">click to take / choose a picture, or paste (Ctrl/⌘+V)</p>
     </div>
   );
 }
