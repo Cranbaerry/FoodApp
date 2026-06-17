@@ -263,6 +263,8 @@ async function main() {
     commit: Commit;
     quality: Quality;
   }[];
+  const hasScores = scored.length > 0;
+  const fmtScore = (v: number) => (hasScores ? v.toFixed(1) : "n/a");
 
   // Weight overall score by lines changed so big commits count more.
   const totalLines = scored.reduce((s, r) => s + r.commit.added + r.commit.deleted, 0) || 1;
@@ -299,9 +301,13 @@ async function main() {
     `  Lines/hour:     ${hours > 0 ? Math.round((totalAdded + totalDeleted) / hours) : "n/a"}`,
   );
   console.log("─".repeat(60));
-  console.log(`  Overall quality: ${weightedOverall.toFixed(1)}/10  ${bar(weightedOverall)}`);
-  for (const [k, v] of Object.entries(dimAverages)) {
-    console.log(`   ${k.padEnd(14)} ${v.toFixed(1)}  ${bar(v)}`);
+  if (!hasScores) {
+    console.log("  Overall quality: n/a (no commits could be reviewed — check OPENAI_API_KEY / quota)");
+  } else {
+    console.log(`  Overall quality: ${weightedOverall.toFixed(1)}/10  ${bar(weightedOverall)}`);
+    for (const [k, v] of Object.entries(dimAverages)) {
+      console.log(`   ${k.padEnd(14)} ${v.toFixed(1)}  ${bar(v)}`);
+    }
   }
   console.log("═".repeat(60) + "\n");
 
@@ -318,13 +324,13 @@ async function main() {
   md.push(`| Commits | ${commits.length} |`);
   md.push(`| Lines changed | +${totalAdded} / -${totalDeleted} |`);
   md.push(`| Hours | ${hours.toFixed(1)}h — ${hoursSource} |`);
-  md.push(`| Overall quality | **${weightedOverall.toFixed(1)} / 10** |`);
+  md.push(`| Overall quality | ${hasScores ? `**${weightedOverall.toFixed(1)} / 10**` : "n/a (no commits reviewed)"} |`);
   md.push("");
   md.push("### Quality by dimension");
   md.push("");
   md.push(`| Dimension | Score |`);
   md.push(`| --- | --- |`);
-  for (const [k, v] of Object.entries(dimAverages)) md.push(`| ${k} | ${v.toFixed(1)} |`);
+  for (const [k, v] of Object.entries(dimAverages)) md.push(`| ${k} | ${fmtScore(v)} |`);
   md.push("");
   md.push("## Per-commit");
   md.push("");
